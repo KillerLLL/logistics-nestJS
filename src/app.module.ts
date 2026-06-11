@@ -23,8 +23,10 @@ import { OrderModule } from './order/order.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { WechatModule } from './wechat/wechat.module';
+import { WalletModule } from './wallet/wallet.module';
 import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
+import { Wallet } from './wallet/wallet.entity';
 
 @Module({
   imports: [
@@ -44,7 +46,7 @@ import { User } from './user/user.entity';
         password: cfg.get<string>('database.password'),
         database: cfg.get<string>('database.database'),
         charset: cfg.get<string>('database.charset') || 'utf8mb4',
-        entities: [Order, User],
+        entities: [Order, User, Wallet],
         synchronize: cfg.get<boolean>('database.synchronize'),
         autoLoadEntities: true,
       }),
@@ -56,6 +58,7 @@ import { User } from './user/user.entity';
     WechatModule,
     UserModule,
     OrderModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [

@@ -30,13 +30,21 @@ export class SmsLoginDto {
 
 export class QuickLoginDto {
   @ApiProperty({ description: '微信jsCode' })
+  @IsString()
   jsCode: string;
 
-  @ApiProperty({ description: '微信openCode' })
+  @ApiProperty({ description: '微信openCode（wx.login 返回的 code）' })
+  @IsString()
   openCode: string;
 
   @ApiProperty({ description: '登录类型', example: '1' })
+  @IsString()
   type: string;
+
+  @ApiProperty({ description: '邀请码', required: false })
+  @IsOptional()
+  @IsString()
+  invitationCode?: string;
 }
 
 export class MpSetDto {

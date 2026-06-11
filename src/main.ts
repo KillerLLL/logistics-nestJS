@@ -1,10 +1,11 @@
 // ============================================================
 // main.ts — 应用入口
 //   全局 ValidationPipe（白名单 + 禁用未知字段）
-//   Swagger Bearer 鉴权定义（替代旧 X-Access-Token）
+//   Swagger Bearer 鉴权定义
+//   全局前缀为空（对齐前端调用路径）
 // ============================================================
 
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -13,15 +14,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
-  const globalPrefix = config.get<string>('globalPrefix') || 'logistics-boot';
-  const reflector = app.get(Reflector);
 
-  // 全局前缀：和前端 API 路径保持一致；健康检查/文档页排除
+  const globalPrefix = config.get<string>('globalPrefix') || 'logistics-boot';
   app.setGlobalPrefix(globalPrefix, {
     exclude: ['/', 'api-docs', 'swagger', 'swagger-json', 'health'],
   });
 
-  // 全局入参校验：白名单模式 + 禁用未知字段 + 自动类型转换
+  // 全局入参校验
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -60,7 +59,7 @@ async function bootstrap() {
 </html>`);
   });
 
-  // 显式声明一个根路由 + 健康检查
+  // 根路由 + 健康检查
   app.getHttpAdapter().get('/', (_req: any, res: any) => {
     res.json({ name: 'uniapp-logistics', version: '0.0.1', ok: true });
   });
