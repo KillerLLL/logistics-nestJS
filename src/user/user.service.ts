@@ -1,16 +1,17 @@
 // ============================================================
 // user.service.ts — 用户服务层
-// 处理登录、注册、Token 等用户相关业务逻辑
+//   兼容保留旧 /sys/* 行为（@Deprecated 一版）
+//   主路径改为：findById / updateProfile / bindPhone
 // ============================================================
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { SmsSendDto, SmsLoginDto, QuickLoginDto } from './user.dto';
+import { SmsSendDto, SmsLoginDto, QuickLoginDto, UpdateProfileDto } from './dto/user.dto';
 import { Result } from '../common/result';
 
-// 内存中暂存验证码（生产环境用 Redis）
+// 内存暂存短信验证码（生产替换为 Redis；本期留位）
 const smsCodes = new Map<string, string>();
 
 @Injectable()
@@ -20,98 +21,65 @@ export class UserService {
     private userRepo: Repository<User>,
   ) {}
 
-  // 发送短信验证码（模拟，控制台输出）
+  // =================== 新主路径 ===================
+
+  async findById(id: string): Promise<User | null> {
+    return this.userRepo.findOne({ where: { id } });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('用户不存在');
+    if (dto.nickname !== undefined) user.nickname = dto.nickname;
+    if (dto.avatar !== undefined) user.avatar = dto.avatar;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    return this.userRepo.save(user);
+  }
+
+  // =================== 旧 /sys/* 兼容（@Deprecated） ===================
+
   async sendSms(dto: SmsSendDto) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     smsCodes.set(dto.mobile, code);
-    // 模拟发送短信，实际项目调阿里云/腾讯云短信 API
     console.log(`[短信] ${dto.mobile} 验证码: ${code}`);
     return Result.ok(null, '验证码发送成功');
   }
 
-  // 短信验证码登录
   async smsLogin(dto: SmsLoginDto) {
-    // 验证码校验（888888 是万能验证码，方便测试）
     const savedCode = smsCodes.get(dto.mobile);
     if (dto.code !== '888888' && (!savedCode || savedCode !== dto.code)) {
       return Result.fail('验证码错误', 400);
     }
-
-    // 查找或创建用户
-    let user = await this.userRepo.findOneBy({ phone: dto.mobile });
+    let user = await this.userRepo.findOne({ where: { phone: dto.mobile } });
     if (!user) {
       user = this.userRepo.create({ phone: dto.mobile, nickname: `用户${dto.mobile.slice(-4)}` });
     }
-
-    // 生成 token（简化版，生产环境用 JWT）
-    user.token = `token_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    // 旧版本用 DB token；新版仅做兼容：把 phone 当 username 兼容密码登录的备用通道
     await this.userRepo.save(user);
-
-    // 清除验证码
     smsCodes.delete(dto.mobile);
-
     return Result.ok({
-      token: user.token,
+      token: '',
       userInfo: { id: user.id, phone: user.phone, nickname: user.nickname, avatar: user.avatar },
-    }, '登录成功');
+    }, '登录成功（兼容旧接口，请改用 /auth/login 或 /wechat/jscode2session）');
   }
 
-  // 微信快捷登录（模拟）
   async quickLogin(dto: QuickLoginDto) {
-    // 实际项目：用 jsCode 调微信 API 换取 openId
-    const mockOpenid = `wx_${dto.jsCode}_${Date.now()}`;
-
-    let user = await this.userRepo.findOneBy({ mpOpenid: mockOpenid });
-    if (!user) {
-      user = this.userRepo.create({
-        phone: '',
-        nickname: `微信用户${Date.now().toString(36)}`,
-        mpOpenid: mockOpenid,
-      });
-    }
-
-    user.token = `token_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    await this.userRepo.save(user);
-
-    return Result.ok({
-      token: user.token,
-      userInfo: { id: user.id, phone: user.phone, nickname: user.nickname, avatar: user.avatar },
-    }, '登录成功');
+    // 旧 quicklogin 已被 /wechat/jscode2session 取代；返回引导信息
+    return Result.fail('该接口已弃用，请改用 POST /wechat/jscode2session', 410);
   }
 
-  // 获取用户信息（通过 token 查找）
-  async getUserInfo(token: string) {
-    const user = await this.userRepo.findOneBy({ token });
-    if (!user) {
-      return Result.fail('用户不存在或未登录', 401);
-    }
-    return Result.ok({
-      id: user.id,
-      phone: user.phone,
-      nickname: user.nickname,
-      avatar: user.avatar,
-      companyName: user.companyName,
-      certStatus: user.certStatus,
-      mpOpenid: user.mpOpenid,
-    });
+  async getUserInfoByToken(token: string) {
+    // 旧版基于 token 列的查询不再维护
+    return Result.fail('该接口已弃用，请改用 GET /user/info（Authorization: Bearer xxx）', 410);
   }
 
-  // 退出登录（清除 token）
-  async logout(token: string) {
-    const user = await this.userRepo.findOneBy({ token });
-    if (user) {
-      user.token = '';
-      await this.userRepo.save(user);
-    }
-    return Result.ok(null, '退出成功');
+  async logoutByToken(token: string) {
+    return Result.fail('该接口已弃用，请改用 POST /auth/logout', 410);
   }
 
-  // 绑定微信 openId
-  async mpSet(userId: number, mpOpenid: string) {
-    const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) {
-      return Result.fail('用户不存在', 404);
-    }
+  async mpSet(userId: string, mpOpenid: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) return Result.fail('用户不存在', 404);
     user.mpOpenid = mpOpenid;
     await this.userRepo.save(user);
     return Result.ok(null, '绑定成功');

@@ -81,7 +81,7 @@ export class AuthService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) return;
     // 吊销当前 refresh；并升 jwt_version 让该用户所有 access 失效
-    user.refreshTokenHash = null;
+    user.refreshTokenHash = undefined;
     user.jwtVersion = (user.jwtVersion || 0) + 1;
     await this.userRepo.save(user);
   }
@@ -107,11 +107,11 @@ export class AuthService {
 
     const accessToken = await this.jwt.signAsync(payload, {
       secret: accessSecret,
-      expiresIn: accessTtl,
+      expiresIn: accessTtl as any,
     });
     const refreshToken = await this.jwt.signAsync(
       { sub: user.id, jwtVersion: user.jwtVersion || 0 },
-      { secret: refreshSecret, expiresIn: refreshTtl },
+      { secret: refreshSecret, expiresIn: refreshTtl as any },
     );
 
     user.refreshTokenHash = this.hashRefresh(refreshToken);

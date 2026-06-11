@@ -1,31 +1,47 @@
 // ============================================================
-// main.ts — 应用入口文件
+// main.ts — 应用入口
+//   全局 ValidationPipe（白名单 + 禁用未知字段）
+//   Swagger Bearer 鉴权定义（替代旧 X-Access-Token）
 // ============================================================
 
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const config = app.get(ConfigService);
+  const globalPrefix = config.get<string>('globalPrefix') || 'logistics-boot';
+  const reflector = app.get(Reflector);
 
-  // 设置全局前缀，和前端 API 路径保持一致
-  // 这样 Controller 里写 sys/sms，实际路径就是 /logistics-boot/sys/sms
-  // 但 /api-docs 和 /swagger 路径要排除，否则文档页面也会加前缀
-  app.setGlobalPrefix('logistics-boot', {
-    exclude: ['/', 'api-docs', 'swagger', 'health'],
+  // 全局前缀：和前端 API 路径保持一致；健康检查/文档页排除
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: ['/', 'api-docs', 'swagger', 'swagger-json', 'health'],
   });
 
-  // ============ 接口文档配置 ============
-  const config = new DocumentBuilder()
-    .setTitle('物流小程序 API')
-    .setDescription('物流订单管理接口文档')
-    .setVersion('1.0')
-    .addApiKey({ type: 'apiKey', name: 'X-Access-Token', in: 'header' }, 'token')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
+  // 全局入参校验：白名单模式 + 禁用未知字段 + 自动类型转换
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
 
-  // Swagger JSON 数据接口
+  // ============ 接口文档配置 ============
+  const docConfig = new DocumentBuilder()
+    .setTitle('物流小程序 API')
+    .setDescription('微信小程序端注册登录 + 一键登录 + 用户管理接口')
+    .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'Authorization', in: 'header' },
+      'access-token',
+    )
+    .build();
+  const document = SwaggerModule.createDocument(app, docConfig);
   SwaggerModule.setup('swagger', app, document);
 
   // Scalar 页面
@@ -44,8 +60,18 @@ async function bootstrap() {
 </html>`);
   });
 
-  console.log('接口文档: http://localhost:3000/api-docs');
-  await app.listen(3000);
-  console.log('服务已启动: http://localhost:3000');
+  // 显式声明一个根路由 + 健康检查
+  app.getHttpAdapter().get('/', (_req: any, res: any) => {
+    res.json({ name: 'uniapp-logistics', version: '0.0.1', ok: true });
+  });
+  app.getHttpAdapter().get('/health', (_req: any, res: any) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  const port = config.get<number>('port') || 3000;
+  console.log(`接口文档(Swagger): http://localhost:${port}/swagger`);
+  console.log(`接口文档(Scalar): http://localhost:${port}/api-docs`);
+  await app.listen(port);
+  console.log(`服务已启动: http://localhost:${port}`);
 }
 bootstrap();
