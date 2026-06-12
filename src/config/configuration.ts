@@ -35,6 +35,23 @@ export interface AppConfig {
     failLockThreshold: number;
     failLockMinutes: number;
   };
+  oss: {
+    /** S3 endpoint（京东云填 https://s3.cn-east-2.jdcloud-oss.com） */
+    endpoint: string;
+    /** S3 region（京东云填 cn-east-2） */
+    region: string;
+    /** bucket 名 */
+    bucket: string;
+    /** 公网访问域名（用于拼接返回 URL；如 https://lincode.s3.cn-east-2.jdcloud-oss.com） */
+    publicHost: string;
+    /** bucket 内路径前缀（ul-nestJS/） */
+    pathPrefix: string;
+    /** 访问密钥 */
+    accessKeyId: string;
+    secretAccessKey: string;
+    /** 最大文件大小（字节），默认 10MB */
+    maxSize: number;
+  };
 }
 
 export default (): AppConfig => ({
@@ -68,5 +85,17 @@ export default (): AppConfig => ({
   loginPolicy: {
     failLockThreshold: parseInt(process.env.LOGIN_FAIL_LOCK_THRESHOLD || '5', 10),
     failLockMinutes: parseInt(process.env.LOGIN_FAIL_LOCK_MINUTES || '15', 10),
+  },
+  oss: {
+    endpoint: process.env.OSS_ENDPOINT || 'https://s3.cn-east-2.jdcloud-oss.com',
+    region: process.env.OSS_REGION || 'cn-east-2',
+    bucket: process.env.OSS_BUCKET || 'lincode',
+    publicHost:
+      process.env.OSS_PUBLIC_HOST ||
+      `https://${process.env.OSS_BUCKET || 'lincode'}.s3.cn-east-2.jdcloud-oss.com`,
+    pathPrefix: process.env.OSS_PATH_PREFIX || 'ul-nestJS/',
+    accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.OSS_SECRET_ACCESS_KEY || '',
+    maxSize: parseInt(process.env.OSS_MAX_SIZE || '10485760', 10), // 10MB
   },
 });

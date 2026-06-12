@@ -14,6 +14,7 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/init.seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1067.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
