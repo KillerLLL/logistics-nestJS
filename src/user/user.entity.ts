@@ -211,4 +211,29 @@ export class User {
 
   @Column({ name: 'comp_mcp_user_id', type: 'varchar', length: 64, nullable: true, comment: 'MCP 用户ID' })
   compMcpUserId: string;
+
+  // ===== 认证附件字段 =====
+  @Column({ name: 'comp_id_card_num', type: 'varchar', length: 20, nullable: true, comment: '身份证号' })
+  compIdCardNum: string;
+
+  @Column({ name: 'comp_license_file_id', type: 'varchar', length: 64, nullable: true, comment: '营业执照文件ID' })
+  compLicenseFileId: string;
+
+  @Column({ name: 'comp_license_file_url', type: 'varchar', length: 500, nullable: true, comment: '营业执照文件URL' })
+  compLicenseFileUrl: string;
+
+  @Column({ name: 'comp_id_card_front_file_id', type: 'varchar', length: 64, nullable: true, comment: '身份证正面文件ID' })
+  compIdCardFrontFileId: string;
+
+  @Column({ name: 'comp_id_card_front_file_url', type: 'varchar', length: 500, nullable: true, comment: '身份证正面文件URL' })
+  compIdCardFrontFileUrl: string;
+
+  @Column({ name: 'comp_id_card_back_file_id', type: 'varchar', length: 64, nullable: true, comment: '身份证背面文件ID' })
+  compIdCardBackFileId: string;
+
+  @Column({ name: 'comp_id_card_back_file_url', type: 'varchar', length: 500, nullable: true, comment: '身份证背面文件URL' })
+  compIdCardBackFileUrl: string;
+
+  @Column({ name: 'comp_region_names', type: 'varchar', length: 300, nullable: true, comment: '区域名称数组JSON' })
+  compRegionNames: string;
 }

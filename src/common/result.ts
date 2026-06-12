@@ -11,7 +11,7 @@ export class Result {
       code: 200,
       message,
       data,
-      result: data, // 兼容：保留旧字段
+      result: data,
       success: true,
       timestamp: Date.now(),
     };
@@ -22,7 +22,7 @@ export class Result {
       code,
       message,
       data,
-      result: data, // 兼容
+      result: data,
       success: false,
       timestamp: Date.now(),
     };

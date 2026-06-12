@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { SmsSendDto, SmsLoginDto, QuickLoginDto, UpdateProfileDto, UpdateCompanyDto, PqUpdateDto } from './dto/user.dto';
+import { CertificationDto } from './dto/certification.dto';
 import { Result } from '../common/result';
 import { AuthService } from '../auth/auth.service';
 
@@ -68,6 +69,15 @@ export interface CompanyInfoVo {
   updateTime: string | null;
   createTime: string | null;
   mcpUserId: string | null;
+  // 认证附件字段
+  idCardNum: string | null;
+  licenseFileId: string | null;
+  licenseFileUrl: string | null;
+  idCardFrontFileId: string | null;
+  idCardFrontFileUrl: string | null;
+  idCardBackFileId: string | null;
+  idCardBackFileUrl: string | null;
+  regionNames: string[];
 }
 
 const EMPTY_COMPANY: Omit<CompanyInfoVo, 'id'> = {
@@ -100,6 +110,14 @@ const EMPTY_COMPANY: Omit<CompanyInfoVo, 'id'> = {
   updateTime: null,
   createTime: null,
   mcpUserId: null,
+  idCardNum: null,
+  licenseFileId: null,
+  licenseFileUrl: null,
+  idCardFrontFileId: null,
+  idCardFrontFileUrl: null,
+  idCardBackFileId: null,
+  idCardBackFileUrl: null,
+  regionNames: [],
 };
 
 @Injectable()
@@ -229,7 +247,7 @@ export class UserService {
       companyType: u.compCompanyType ?? 0,
       consignorType: u.compConsignorType ?? 0,
       linkman: u.compLinkman ?? null,
-      linkmanMobile: u.compLinkmanMobile ?? null,
+      linkmanMobile: u.compLinkmanMobile || u.phone || null,
       legalRepresentative: u.compLegalRepresentative ?? null,
       licenseBeginDate: u.compLicenseBeginDate ?? null,
       licenseEndDate: u.compLicenseEndDate ?? null,
@@ -248,6 +266,14 @@ export class UserService {
       updateTime: u.compUpdateTime ?? null,
       createTime: u.compCreateTime ?? null,
       mcpUserId: u.compMcpUserId ?? null,
+      idCardNum: u.compIdCardNum ?? null,
+      licenseFileId: u.compLicenseFileId ?? null,
+      licenseFileUrl: u.compLicenseFileUrl ?? null,
+      idCardFrontFileId: u.compIdCardFrontFileId ?? null,
+      idCardFrontFileUrl: u.compIdCardFrontFileUrl ?? null,
+      idCardBackFileId: u.compIdCardBackFileId ?? null,
+      idCardBackFileUrl: u.compIdCardBackFileUrl ?? null,
+      regionNames: u.compRegionNames ? JSON.parse(u.compRegionNames) : [],
     };
   }
 
@@ -310,5 +336,64 @@ export class UserService {
     user.mpOpenid = mpOpenid;
     await this.userRepo.save(user);
     return Result.ok(null, '绑定成功');
+  }
+
+  // =================== 认证相关 ===================
+
+  /** 获取当前用户认证数据 */
+  async getCertData(userId: string): Promise<CompanyInfoVo> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) return this.emptyCompanyInfoVo(userId);
+    return this.toCompanyInfoVo(user);
+  }
+
+  /** 提交认证数据 */
+  async updateCertData(userId: string, dto: CertificationDto): Promise<CompanyInfoVo> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('用户不存在');
+
+    user.compConsignorType = dto.consignorType;
+    user.compName = dto.name;
+    user.companyName = dto.name;
+    user.compLinkman = dto.linkman;
+    user.compLinkmanMobile = dto.linkmanMobile;
+    user.compAddr = dto.addr;
+    user.compAreaId = dto.areaId;
+    user.compLicenseBeginDate = dto.licenseBeginDate;
+    user.compLicenseEndDate = dto.licenseEndDate;
+    user.compIsLicenseLongTerm = dto.isLicenseLongTerm;
+
+    if (dto.invoiceTitle !== undefined) user.compInvoiceTitle = dto.invoiceTitle;
+    if (dto.areaName !== undefined) user.compAreaName = dto.areaName;
+    if (dto.industryType !== undefined) user.compIndustryType = dto.industryType;
+    if (dto.regionNames !== undefined) user.compRegionNames = dto.regionNames;
+
+    // 企业字段
+    if (dto.taxpayerNumber !== undefined) user.compTaxpayerNumber = dto.taxpayerNumber;
+    if (dto.legalRepresentative !== undefined) user.compLegalRepresentative = dto.legalRepresentative;
+    if (dto.registeredCapital !== undefined) user.compRegisteredCapital = dto.registeredCapital;
+    if (dto.licenseFileId !== undefined) user.compLicenseFileId = dto.licenseFileId;
+    if (dto.licenseFileUrl !== undefined) user.compLicenseFileUrl = dto.licenseFileUrl;
+
+    // 个人字段
+    if (dto.idCardNum !== undefined) user.compIdCardNum = dto.idCardNum;
+    if (dto.idCardFrontFileId !== undefined) user.compIdCardFrontFileId = dto.idCardFrontFileId;
+    if (dto.idCardFrontFileUrl !== undefined) user.compIdCardFrontFileUrl = dto.idCardFrontFileUrl;
+    if (dto.idCardBackFileId !== undefined) user.compIdCardBackFileId = dto.idCardBackFileId;
+    if (dto.idCardBackFileUrl !== undefined) user.compIdCardBackFileUrl = dto.idCardBackFileUrl;
+
+    // 物流字段
+    if (dto.roadCode !== undefined) user.compRoadCode = dto.roadCode;
+    if (dto.permitScope !== undefined) user.compPermitScope = dto.permitScope;
+
+    // 设置状态为待审核
+    user.compCompanyStatus = dto.companyStatus ?? 0;
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    user.compUpdateTime = now;
+    if (!user.compCreateTime) user.compCreateTime = now;
+
+    await this.userRepo.save(user);
+    return this.toCompanyInfoVo(user);
   }
 }

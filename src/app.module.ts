@@ -25,6 +25,8 @@ import { AuthModule } from './auth/auth.module';
 import { WechatModule } from './wechat/wechat.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OssModule } from './oss/oss.module';
+import { OcrModule } from './ocr/ocr.module';
+import { CategoryModule } from './category/category.module';
 import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
 import { Wallet } from './wallet/wallet.entity';
@@ -61,6 +63,8 @@ import { Wallet } from './wallet/wallet.entity';
     OrderModule,
     WalletModule,
     OssModule,
+    OcrModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [

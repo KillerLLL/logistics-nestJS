@@ -52,6 +52,12 @@ export interface AppConfig {
     /** 最大文件大小（字节），默认 10MB */
     maxSize: number;
   };
+  ocr: {
+    /** 腾讯云 SecretId */
+    tencentSecretId: string;
+    /** 腾讯云 SecretKey */
+    tencentSecretKey: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -97,5 +103,9 @@ export default (): AppConfig => ({
     accessKeyId: process.env.OSS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.OSS_SECRET_ACCESS_KEY || '',
     maxSize: parseInt(process.env.OSS_MAX_SIZE || '10485760', 10), // 10MB
+  },
+  ocr: {
+    tencentSecretId: process.env.OCR_TENCENT_SECRET_ID || '',
+    tencentSecretKey: process.env.OCR_TENCENT_SECRET_KEY || '',
   },
 });
