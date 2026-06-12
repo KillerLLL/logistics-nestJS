@@ -27,9 +27,11 @@ import { WalletModule } from './wallet/wallet.module';
 import { OssModule } from './oss/oss.module';
 import { OcrModule } from './ocr/ocr.module';
 import { CategoryModule } from './category/category.module';
+import { AddressModule } from './address/address.module';
 import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
 import { Wallet } from './wallet/wallet.entity';
+import { Address } from './address/address.entity';
 
 @Module({
   imports: [
@@ -49,7 +51,7 @@ import { Wallet } from './wallet/wallet.entity';
         password: cfg.get<string>('database.password'),
         database: cfg.get<string>('database.database'),
         charset: cfg.get<string>('database.charset') || 'utf8mb4',
-        entities: [Order, User, Wallet],
+        entities: [Order, User, Wallet, Address],
         synchronize: cfg.get<boolean>('database.synchronize'),
         autoLoadEntities: true,
       }),
@@ -65,6 +67,7 @@ import { Wallet } from './wallet/wallet.entity';
     OssModule,
     OcrModule,
     CategoryModule,
+    AddressModule,
   ],
   controllers: [AppController],
   providers: [
