@@ -366,7 +366,7 @@ export class UserService {
     if (dto.invoiceTitle !== undefined) user.compInvoiceTitle = dto.invoiceTitle;
     if (dto.areaName !== undefined) user.compAreaName = dto.areaName;
     if (dto.industryType !== undefined) user.compIndustryType = dto.industryType;
-    if (dto.regionNames !== undefined) user.compRegionNames = dto.regionNames;
+    if (dto.regionNames !== undefined) user.compRegionNames = JSON.stringify(dto.regionNames);
 
     // 企业字段
     if (dto.taxpayerNumber !== undefined) user.compTaxpayerNumber = dto.taxpayerNumber;

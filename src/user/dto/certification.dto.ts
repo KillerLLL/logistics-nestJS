@@ -10,6 +10,7 @@ import {
   IsInt,
   IsIn,
   IsNumber,
+  IsArray,
   MaxLength,
 } from 'class-validator';
 
@@ -180,10 +181,10 @@ export class CertificationDto {
   @IsInt()
   companyStatus?: number;
 
-  // 区域名称（JSON 数组，用于 picker 回显）
-  @ApiProperty({ required: false, description: '区域名称数组JSON' })
+  // 区域名称（数组，用于 picker 回显）
+  @ApiProperty({ required: false, description: '区域名称数组' })
   @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  regionNames?: string;
+  @IsArray()
+  @IsString({ each: true })
+  regionNames?: string[];
 }
