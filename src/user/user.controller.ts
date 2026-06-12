@@ -17,6 +17,7 @@ import {
   QuickLoginDto,
   MpSetDto,
   UpdateProfileDto,
+  UpdateCompanyDto,
 } from './dto/user.dto';
 import { LoginDto } from '../auth/dto/login.dto';
 import { Result } from '../common/result';
@@ -49,17 +50,7 @@ export class UserController {
   async getInfo(@CurrentUser() user: JwtPayload) {
     const u = await this.userService.findById(user.sub);
     if (!u) return Result.fail('用户不存在', 404);
-    return Result.ok({
-      id: u.id,
-      username: u.username,
-      nickname: u.nickname,
-      phone: u.phone,
-      avatar: u.avatar,
-      role: u.role,
-      certStatus: u.certStatus,
-      companyName: u.companyName,
-      mpOpenid: u.mpOpenid,
-    });
+    return Result.ok(this.userService.toUserInfoVo(u));
   }
 
   @ApiBearerAuth('access-token')
@@ -85,18 +76,22 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: '更新当前用户资料' })
+  @ApiOperation({ summary: '更新当前用户资料（UserInfo 全字段）' })
   @Patch('user/profile')
   async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
     const u = await this.userService.updateProfile(user.sub, dto);
     return Result.ok({
-      id: u.id,
-      username: u.username,
-      nickname: u.nickname,
-      phone: u.phone,
-      avatar: u.avatar,
-      role: u.role,
-      certStatus: u.certStatus,
+      userInfo: this.userService.toUserInfoVo(u),
+    }, '更新成功');
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: '更新当前用户企业信息（CompanyInfo 30 字段）' })
+  @Patch('user/company')
+  async updateCompany(@CurrentUser() user: JwtPayload, @Body() dto: UpdateCompanyDto) {
+    const u = await this.userService.updateCompany(user.sub, dto);
+    return Result.ok({
+      companyInfo: this.userService.toCompanyInfoVo(u),
     }, '更新成功');
   }
 
@@ -106,9 +101,10 @@ export class UserController {
   @ApiOperation({ summary: '微信一键登录' })
   @Post('sys/quicklogin')
   async quickLogin(@Body() dto: QuickLoginDto, @Req() req: any) {
-    // 前端传的 openCode 是 wx.login 返回的真实 jsCode
-    const jsCode = dto.openCode || dto.jsCode;
-    const result = await this.wechatService.jsCodeLogin(jsCode, req.ip);
+    // openCode = wx.login 返回的 code（换 openid）；jsCode = getPhoneNumber 返回的 code（换手机号）
+    const loginCode = dto.openCode || dto.jsCode;
+    const phoneCode = dto.openCode && dto.jsCode ? dto.jsCode : undefined;
+    const result = await this.wechatService.jsCodeLogin(loginCode, req.ip, phoneCode);
     return Result.ok({
       token: result.token,
       refreshToken: result.refreshToken,
@@ -135,8 +131,8 @@ export class UserController {
     deprecated: true,
   })
   @Post('sys/smslogin')
-  smsLogin(@Body() dto: SmsLoginDto) {
-    return this.userService.smsLogin(dto);
+  smsLogin(@Body() dto: SmsLoginDto, @Req() req: any) {
+    return this.userService.smsLogin(dto, req.ip);
   }
 
   @ApiBearerAuth('access-token')

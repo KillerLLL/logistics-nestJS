@@ -33,11 +33,20 @@ async function bootstrap() {
   // ============ 接口文档配置 ============
   const docConfig = new DocumentBuilder()
     .setTitle('物流小程序 API')
-    .setDescription('微信小程序端注册登录 + 一键登录 + 用户管理接口')
+    .setDescription(
+      '微信小程序端注册登录 + 一键登录 + 用户管理接口\n\n' +
+        '鉴权支持以下两种 header（任选其一即可）：\n' +
+        '1) `Authorization: Bearer <access-token>`（标准约定）\n' +
+        '2) `X-Access-Token: <access-token>`（前端 uniapp http 拦截器注入）',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'Authorization', in: 'header' },
       'access-token',
+    )
+    .addApiKey(
+      { type: 'apiKey', name: 'X-Access-Token', in: 'header' },
+      'x-access-token',
     )
     .build();
   const document = SwaggerModule.createDocument(app, docConfig);

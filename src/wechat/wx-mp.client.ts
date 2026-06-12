@@ -102,12 +102,64 @@ export class WxMpClient {
     }
   }
 
+  // ---------- 用 phone code 换手机号（新版 getPhoneNumber API） ----------
+  async getPhoneByCode(phoneCode: string): Promise<string> {
+    if (this.mockMode) {
+      return this.mockGetPhoneByCode(phoneCode);
+    }
+    const accessToken = await this.getAccessToken();
+    const url = `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${accessToken}`;
+    try {
+      const { data } = await this.http.post(url, { code: phoneCode });
+      if (data.errcode && data.errcode !== 0) {
+        this.logger.warn(`[WxMpClient] getuserphonenumber errcode=${data.errcode} errmsg=${data.errmsg}`);
+        throw new ServiceUnavailableException('获取手机号失败');
+      }
+      return data?.phone_info?.phoneNumber || '';
+    } catch (e) {
+      if (e instanceof ServiceUnavailableException) throw e;
+      this.logger.error('[WxMpClient] getuserphonenumber HTTP error', (e as Error).stack);
+      throw new ServiceUnavailableException('微信服务暂时不可用');
+    }
+  }
+
+  // ---------- 获取 access_token ----------
+  private _accessTokenCache: { token: string; expiresAt: number } | null = null;
+
+  private async getAccessToken(): Promise<string> {
+    if (this._accessTokenCache && Date.now() < this._accessTokenCache.expiresAt) {
+      return this._accessTokenCache.token;
+    }
+    const url = 'https://api.weixin.qq.com/cgi-bin/token';
+    const { data } = await this.http.get(url, {
+      params: { grant_type: 'client_credential', appid: this.appid, secret: this.secret },
+    });
+    if (!data.access_token) {
+      this.logger.error('[WxMpClient] getAccessToken failed', JSON.stringify(data));
+      throw new ServiceUnavailableException('获取微信 access_token 失败');
+    }
+    // 提前 5 分钟过期
+    this._accessTokenCache = {
+      token: data.access_token,
+      expiresAt: Date.now() + (data.expires_in - 300) * 1000,
+    };
+    return data.access_token;
+  }
+
   // ---------- 沙箱 mock：openid 流程 ----------
   private mockExchangeJsCode(jsCode: string): JsCode2SessionResult {
     // 用 jsCode 哈希生成稳定的 mock openid（保证同一 code 多次调用拿到同一 openid）
     const openid = 'mock_openid_' + crypto.createHash('md5').update(jsCode).digest('hex').slice(0, 24);
     const sessionKey = 'mock_sess_' + crypto.randomBytes(12).toString('hex');
     return { openid, sessionKey };
+  }
+
+  // ---------- 沙箱 mock：phone code 换手机号 ----------
+  private mockGetPhoneByCode(phoneCode: string): string {
+    const hash = crypto.createHash('md5').update(phoneCode || 'default').digest('hex');
+    // 生成 10 位后缀，拼上前缀 "1" = 11 位手机号
+    const num = parseInt(hash.slice(0, 10), 16) % 10000000000;
+    return '1' + num.toString().padStart(10, '0');
   }
 
   // ---------- 沙箱 mock：手机号解密 ----------

@@ -23,6 +23,7 @@ export interface LoginResult {
     id: string;
     username: string;
     nickname: string;
+    realname: string;
     phone: string;
     avatar: string;
     role: string;
@@ -127,7 +128,8 @@ export class AuthService {
         id: user.id,
         username: user.username,
         nickname: user.nickname,
-        phone: user.phone,
+        realname: user.realname ?? '',
+        phone: user.phone ?? '',
         avatar: user.avatar,
         role: user.role,
         certStatus: user.certStatus,

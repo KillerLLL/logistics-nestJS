@@ -9,8 +9,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { SmsSendDto, SmsLoginDto, QuickLoginDto, UpdateProfileDto } from './dto/user.dto';
+import { SmsSendDto, SmsLoginDto, QuickLoginDto, UpdateProfileDto, UpdateCompanyDto, PqUpdateDto } from './dto/user.dto';
 import { Result } from '../common/result';
+import { AuthService } from '../auth/auth.service';
 
 // 内存暂存短信验证码（生产替换为 Redis；本期留位）
 const smsCodes = new Map<string, string>();
@@ -18,6 +19,7 @@ const smsCodes = new Map<string, string>();
 export interface UserInfoVo {
   id: string;
   username: string;
+  nickname: string;
   realname: string;
   avatar: string | null;
   birthday: string | null;
@@ -105,6 +107,7 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private authService: AuthService,
   ) {}
 
   // =================== 新主路径 ===================
@@ -117,15 +120,84 @@ export class UserService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new Error('用户不存在');
     if (dto.nickname !== undefined) user.nickname = dto.nickname;
+    if (dto.realname !== undefined) user.realname = dto.realname;
     if (dto.avatar !== undefined) user.avatar = dto.avatar;
+    if (dto.birthday !== undefined) user.birthday = dto.birthday;
+    if (dto.sex !== undefined) user.sex = dto.sex as any;
+    if (dto.email !== undefined) user.email = dto.email;
     if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.orgCode !== undefined) user.orgCode = dto.orgCode;
+    if (dto.orgCodeTxt !== undefined) user.orgCodeTxt = dto.orgCodeTxt;
+    if (dto.workNo !== undefined) user.workNo = dto.workNo;
+    if (dto.post !== undefined) user.post = dto.post;
+    if (dto.userIdentity !== undefined) user.userIdentity = dto.userIdentity as any;
+    if (dto.isPartner !== undefined) user.isPartner = dto.isPartner;
+    if (dto.partnerStatus !== undefined) user.partnerStatus = dto.partnerStatus;
     return this.userRepo.save(user);
+  }
+
+  async updateCompany(userId: string, dto: UpdateCompanyDto): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('用户不存在');
+    if (dto.name !== undefined) {
+      user.compName = dto.name;
+      // 同步旧 companyName 字段（前端兼容/列表展示用）
+      user.companyName = dto.name;
+    }
+    if (dto.addr !== undefined) user.compAddr = dto.addr;
+    if (dto.areaId !== undefined) user.compAreaId = dto.areaId;
+    if (dto.areaName !== undefined) user.compAreaName = dto.areaName;
+    if (dto.checkResult !== undefined) user.compCheckResult = dto.checkResult;
+    if (dto.companyAttribute !== undefined) user.compCompanyAttribute = dto.companyAttribute;
+    if (dto.companyStatus !== undefined) user.compCompanyStatus = dto.companyStatus;
+    if (dto.companyType !== undefined) user.compCompanyType = dto.companyType;
+    if (dto.consignorType !== undefined) user.compConsignorType = dto.consignorType;
+    if (dto.linkman !== undefined) user.compLinkman = dto.linkman;
+    if (dto.linkmanMobile !== undefined) user.compLinkmanMobile = dto.linkmanMobile;
+    if (dto.legalRepresentative !== undefined) user.compLegalRepresentative = dto.legalRepresentative;
+    if (dto.licenseBeginDate !== undefined) user.compLicenseBeginDate = dto.licenseBeginDate;
+    if (dto.licenseEndDate !== undefined) user.compLicenseEndDate = dto.licenseEndDate;
+    if (dto.isLicenseLongTerm !== undefined) user.compIsLicenseLongTerm = dto.isLicenseLongTerm;
+    if (dto.registeredCapital !== undefined) user.compRegisteredCapital = dto.registeredCapital;
+    if (dto.permitScope !== undefined) user.compPermitScope = dto.permitScope;
+    if (dto.taxpayerNumber !== undefined) user.compTaxpayerNumber = dto.taxpayerNumber;
+    if (dto.invoiceTitle !== undefined) user.compInvoiceTitle = dto.invoiceTitle;
+    if (dto.roadCode !== undefined) user.compRoadCode = dto.roadCode;
+    if (dto.roadBeginDate !== undefined) user.compRoadBeginDate = dto.roadBeginDate;
+    if (dto.roadEndDate !== undefined) user.compRoadEndDate = dto.roadEndDate;
+    if (dto.monthlySettlement !== undefined) user.compMonthlySettlement = dto.monthlySettlement;
+    if (dto.industryType !== undefined) user.compIndustryType = dto.industryType;
+    if (dto.platformId !== undefined) user.compPlatformId = dto.platformId;
+    if (dto.mcpUserId !== undefined) user.compMcpUserId = dto.mcpUserId;
+    // 维护 comp_update_time = 当前时间
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    user.compUpdateTime = now;
+    return this.userRepo.save(user);
+  }
+
+  /**
+   * 平台托运人更新个人资料（POST /company/gyCompany/pqUpdate）
+   * 对齐前端 apiPqUpdateProfile() — 当前 UI 只传 avatar；后端三个字段都接受
+   * 返回 string（前端类型 Promise<RequestResult<string>>，实际只用 success/message）
+   */
+  async pqUpdate(userId: string, dto: PqUpdateDto): Promise<string> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('用户不存在');
+    if (dto.avatar !== undefined) user.avatar = dto.avatar;
+    if (dto.realname !== undefined) user.realname = dto.realname;
+    if (dto.companyName !== undefined) {
+      user.companyName = dto.companyName;
+      user.compName = dto.companyName; // 同步到 compName 字段
+    }
+    await this.userRepo.save(user);
+    return '更新成功';
   }
 
   toUserInfoVo(u: User): UserInfoVo {
     return {
       id: u.id,
       username: u.username ?? '',
+      nickname: u.nickname ?? '',
       realname: u.realname ?? '',
       avatar: u.avatar ?? null,
       birthday: u.birthday ?? null,
@@ -193,21 +265,31 @@ export class UserService {
     return Result.ok(null, '验证码发送成功');
   }
 
-  async smsLogin(dto: SmsLoginDto) {
+  async smsLogin(dto: SmsLoginDto, ip: string = '') {
     const savedCode = smsCodes.get(dto.mobile);
     if (dto.code !== '888888' && (!savedCode || savedCode !== dto.code)) {
       return Result.fail('验证码错误', 400);
     }
     let user = await this.userRepo.findOne({ where: { phone: dto.mobile } });
     if (!user) {
-      user = this.userRepo.create({ phone: dto.mobile, nickname: `用户${dto.mobile.slice(-4)}` });
+      user = this.userRepo.create({
+        phone: dto.mobile,
+        nickname: `用户${dto.mobile.slice(-4)}`,
+        realname: `用户${dto.mobile.slice(-4)}`,
+        role: 'shipper',
+        status: 1,
+        certStatus: '0',
+        compCompanyStatus: 66,
+      });
+    } else if (!user.realname) {
+      // 老用户（无 realname）登录时同步补字段
+      user.realname = `用户${dto.mobile.slice(-4)}`;
     }
     await this.userRepo.save(user);
     smsCodes.delete(dto.mobile);
-    return Result.ok({
-      token: '',
-      userInfo: { id: user.id, phone: user.phone, nickname: user.nickname, avatar: user.avatar },
-    }, '登录成功（兼容旧接口，请改用 /auth/login 或 /wechat/jscode2session）');
+    // 签发真实 JWT（access + refresh），与账号密码登录一致
+    const loginResult = await this.authService['issueTokensAndPersist'](user, ip);
+    return Result.ok(loginResult, '登录成功');
   }
 
   async quickLogin(dto: QuickLoginDto) {

@@ -1,6 +1,9 @@
 // ============================================================
 // jwt.strategy.ts — passport-jwt 验签策略
-// 从 Authorization: Bearer <token> 解析，校验签名/过期，注入 req.user
+// 从以下 header 之一解析 token（按优先级）：
+//   1. Authorization: Bearer <token>     — 标准约定
+//   2. X-Access-Token: <token>           — 前端 uniapp http 拦截器注入
+// 校验签名/过期，注入 req.user
 // ============================================================
 
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -9,6 +12,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { Request } from 'express';
 import { User } from '../../user/user.entity';
 
 export interface JwtPayload {
@@ -18,6 +22,26 @@ export interface JwtPayload {
   jwtVersion: number;
 }
 
+function readHeaderValue(v: string | string[] | undefined): string | null {
+  if (typeof v === 'string' && v.length > 0) return v;
+  if (Array.isArray(v) && typeof v[0] === 'string' && v[0].length > 0) return v[0];
+  return null;
+}
+
+function extractToken(req: Request): string | null {
+  if (!req || !req.headers) return null;
+  // 1) Authorization: Bearer <token>（标准约定）
+  const auth = readHeaderValue(req.headers['authorization']);
+  if (auth) {
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1].trim();
+  }
+  // 2) X-Access-Token: <token>（前端 uniapp http 拦截器注入）
+  const xAccess = readHeaderValue(req.headers['x-access-token']);
+  if (xAccess) return xAccess.trim();
+  return null;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -25,7 +49,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        extractToken,
+        ExtractJwt.fromAuthHeaderAsBearerToken(), // 兜底（理论上 extractToken 已覆盖）
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.get<string>('jwt.accessSecret') || 'change-me',
     });

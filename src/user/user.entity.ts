@@ -143,7 +143,7 @@ export class User {
   @Column({ name: 'comp_company_attribute', type: 'varchar', length: 50, nullable: true, comment: '企业属性' })
   compCompanyAttribute: string;
 
-  @Column({ name: 'comp_company_status', type: 'int', default: 0, comment: '企业状态' })
+  @Column({ name: 'comp_company_status', type: 'int', default: 66, comment: '企业状态 0=待审核 10=审核中 20=已通过 30=已拒绝 66=待认证' })
   compCompanyStatus: number;
 
   @Column({ name: 'comp_company_type', type: 'int', default: 0, comment: '企业类型' })
