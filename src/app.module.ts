@@ -29,11 +29,13 @@ import { OcrModule } from './ocr/ocr.module';
 import { CategoryModule } from './category/category.module';
 import { AddressModule } from './address/address.module';
 import { FreightModule } from './freight/freight.module';
+import { WarehouseOrderModule } from './warehouse-order/warehouse-order.module';
 import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
 import { Wallet } from './wallet/wallet.entity';
 import { Address } from './address/address.entity';
 import { UnloadAddress } from './address/unload-address.entity';
+import { WarehouseOrder } from './warehouse-order/warehouse-order.entity';
 
 @Module({
   imports: [
@@ -53,7 +55,7 @@ import { UnloadAddress } from './address/unload-address.entity';
         password: cfg.get<string>('database.password'),
         database: cfg.get<string>('database.database'),
         charset: cfg.get<string>('database.charset') || 'utf8mb4',
-        entities: [Order, User, Wallet, Address, UnloadAddress],
+        entities: [Order, User, Wallet, Address, UnloadAddress, WarehouseOrder],
         synchronize: cfg.get<boolean>('database.synchronize'),
         autoLoadEntities: true,
       }),
@@ -71,6 +73,7 @@ import { UnloadAddress } from './address/unload-address.entity';
     CategoryModule,
     AddressModule,
     FreightModule,
+    WarehouseOrderModule,
   ],
   controllers: [AppController],
   providers: [
