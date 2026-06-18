@@ -32,6 +32,7 @@ import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
 import { Wallet } from './wallet/wallet.entity';
 import { Address } from './address/address.entity';
+import { UnloadAddress } from './address/unload-address.entity';
 
 @Module({
   imports: [
@@ -51,7 +52,7 @@ import { Address } from './address/address.entity';
         password: cfg.get<string>('database.password'),
         database: cfg.get<string>('database.database'),
         charset: cfg.get<string>('database.charset') || 'utf8mb4',
-        entities: [Order, User, Wallet, Address],
+        entities: [Order, User, Wallet, Address, UnloadAddress],
         synchronize: cfg.get<boolean>('database.synchronize'),
         autoLoadEntities: true,
       }),

@@ -9,6 +9,7 @@ import { User } from '../user/user.entity';
 import { Order } from '../order/order.entity';
 import { Wallet } from '../wallet/wallet.entity';
 import { Address } from '../address/address.entity';
+import { UnloadAddress } from '../address/unload-address.entity';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'logistics',
   charset: 'utf8mb4',
-  entities: [User, Order, Wallet, Address],
+  entities: [User, Order, Wallet, Address, UnloadAddress],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,
 });

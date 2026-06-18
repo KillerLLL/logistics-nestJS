@@ -7,8 +7,11 @@ import {
   MaxLength,
 } from 'class-validator';
 
+/**
+ * 地址表单 DTO，发货地址（装货地）与收货地址（卸货地）共用。
+ */
 export class CreateAddressDto {
-  @ApiProperty({ description: '装货地名称' })
+  @ApiProperty({ description: '地址名称（发货为装货地名称，收货为卸货地名称）' })
   @IsString()
   @MaxLength(100)
   name: string;
