@@ -28,6 +28,7 @@ import { OssModule } from './oss/oss.module';
 import { OcrModule } from './ocr/ocr.module';
 import { CategoryModule } from './category/category.module';
 import { AddressModule } from './address/address.module';
+import { FreightModule } from './freight/freight.module';
 import { Order } from './order/order.entity';
 import { User } from './user/user.entity';
 import { Wallet } from './wallet/wallet.entity';
@@ -69,6 +70,7 @@ import { UnloadAddress } from './address/unload-address.entity';
     OcrModule,
     CategoryModule,
     AddressModule,
+    FreightModule,
   ],
   controllers: [AppController],
   providers: [
